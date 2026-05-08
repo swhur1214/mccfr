@@ -19,17 +19,16 @@
 
 \begin{abstract}
 This report studies Monte Carlo Counterfactual Regret Minimization
-(MCCFR), focusing on the external-sampling variant. The project builds on
-a previous implementation of full-tree CFR for Kuhn Poker and asks what
-changes when the regret update is estimated from sampled trajectories
-instead of a complete traversal of the game tree. I keep Kuhn Poker as a
-sanity check, but use Leduc Poker as the main experiment because it is
-large enough to show the computational motivation for sampling. I
-implement full-tree CFR and external-sampling MCCFR in Python, compare
-them on Leduc Poker, and use exact best responses to measure
-exploitability. The main message is that MCCFR keeps the same local
-regret-minimization structure as CFR, but replaces exact counterfactual
-values with sampled estimates.
+(MCCFR), focusing on external and outcome sampling. The project builds on
+my previous implementation and report on regret matching and full-tree
+CFR for Kuhn Poker \cite{hur2026cfr}. It asks what changes when the
+regret update is estimated from sampled trajectories instead of a
+complete traversal of the game tree. I keep Kuhn Poker as a sanity check,
+but use Leduc Poker as the main experiment because it is large enough to
+show the computational motivation for sampling. I implement full-tree CFR,
+external-sampling MCCFR, and outcome-sampling MCCFR in Python. Outcome
+sampling is especially relevant to this course because it uses importance
+weighting to correct for sampling only one terminal trajectory.
 \end{abstract}
 
 \section{From CFR to MCCFR}
@@ -51,7 +50,7 @@ poker variants with more cards, betting actions, or public states, a full
 traversal can become too expensive.
 
 MCCFR keeps the same local regret-minimization structure but estimates
-the counterfactual update by sampling part of the tree. The version
+the counterfactual update by sampling part of the tree. One version
 studied here is \emph{external sampling}. When updating player $i$, chance
 nodes and opponent nodes are sampled, while player $i$'s own decision
 nodes branch over all legal actions. Therefore, when the sampled path
@@ -66,6 +65,13 @@ R_i^{T-1}(I,a)
 where the hats indicate sampled estimates. The important point is that
 this has the same form as the CFR regret update, but the values are
 computed using a sampled subtree instead of the whole tree.
+
+The other version is \emph{outcome sampling}. It goes further and samples
+the update player's action too, so one update sees essentially one
+terminal trajectory. Since unchosen actions are no longer observed, the
+estimator needs importance weights based on the probability of the sampled
+trajectory. This makes outcome sampling more directly connected to Monte
+Carlo simulation ideas, but also gives it higher variance.
 
 \section{Leduc Poker as the Test Game}
 
@@ -185,14 +191,51 @@ corresponding strategy sum. Each player is the opponent once per MCCFR
 iteration because the implementation performs one update for player 0 and
 one update for player 1.
 
+\section{Outcome Sampling and Importance Weights}
+
+Outcome sampling samples chance, opponent actions, and the update
+player's own actions. Thus one recursive call follows a single terminal
+trajectory instead of branching at the update player's information sets.
+This makes each iteration cheaper, but the algorithm must correct for the
+fact that most actions are not observed.
+
+Let $\sigma(I)$ be the regret-matching strategy at information set $I$.
+For the update player, actions are sampled from an exploration policy
+\[
+q(I,a) = (1-\epsilon)\sigma(I,a) + \epsilon\frac{1}{|A(I)|}.
+\]
+In the experiments I use $\epsilon=0.6$, matching the common vanilla
+outcome-sampling choice. If action $a^\star$ is sampled at $I$, the
+sampled child value is corrected by
+\[
+\widehat u(a^\star) = \frac{u(a^\star)}{q(I,a^\star)},
+\qquad
+\widehat u(a)=0 \quad \text{for } a \ne a^\star.
+\]
+The regret update then uses
+\[
+\frac{\pi_{-i}(I)}{q(h)}
+\left(
+\widehat u(a)
+- \sum_{b \in A(I)}\sigma(I,b)\widehat u(b)
+\right),
+\]
+where $q(h)$ is the probability of sampling the trajectory prefix leading
+to $I$. This is the importance-sampling part of the algorithm: sampled
+events that were unlikely under $q$ receive larger weight. The estimator
+targets the same counterfactual-regret quantity as CFR, but its variance
+can be much larger.
+
 \section{Implementation}
 
-The code is self-contained and intentionally small. The Kuhn Poker game
-is represented as a dictionary of extensive-form nodes. Chance nodes store
-the six equally likely card deals, decision nodes store player, information
-set, and action list, and terminal nodes store the zero-sum utility vector.
+The code is self-contained and intentionally small. It follows the direct
+tabular style of my earlier CFR repository \cite{hur2026cfr}, but does
+not import that code. The Kuhn Poker game is represented as a dictionary
+of extensive-form nodes. Chance nodes store the six equally likely card
+deals, decision nodes store player, information set, and action list, and
+terminal nodes store the zero-sum utility vector.
 
-Both algorithms share the same basic interface:
+All three training algorithms share the same basic interface:
 \[
 \texttt{train(iterations)}, \qquad
 \texttt{current\_strategy()}, \qquad
@@ -216,6 +259,8 @@ tree;
 uniform fallback;
 \item \texttt{cfr.py}: full-tree CFR baseline;
 \item \texttt{external\_sampling\_mccfr.py}: external-sampling MCCFR;
+\item \texttt{outcome\_sampling\_mccfr.py}: outcome-sampling MCCFR with
+epsilon exploration and importance weights;
 \item \texttt{util.py}: expected value, best response, exploitability, and
 strategy formatting helpers.
 \end{itemize}
@@ -254,6 +299,8 @@ back to the uniform strategy when needed;
 \item exploitability is finite for a known simple strategy;
 \item full-tree CFR converges near the Kuhn Poker value after
 $10{,}000$ iterations;
+\item outcome-sampling MCCFR converges near the Kuhn Poker value after
+$100{,}000$ iterations;
 \item the generated Leduc game has finite uniform-strategy exploitability;
 \item external-sampling MCCFR reduces exploitability over multiple fixed
 random seeds;
@@ -266,10 +313,11 @@ lists, missing uniform fallback, and regret updates with the wrong sign.
 
 \section{Experiments}
 
-The main experiment compares full-tree CFR and external-sampling MCCFR on
-Leduc Poker. I ran full-tree CFR for $500$ iterations and MCCFR for
-$100{,}000$ iterations with three random seeds. The MCCFR numbers below
-are averaged over seeds.
+The main experiment compares full-tree CFR, external-sampling MCCFR, and
+outcome-sampling MCCFR on Leduc Poker. I ran full-tree CFR for $500$
+iterations, external sampling for $100{,}000$ iterations, and outcome
+sampling for $300{,}000$ iterations. The MCCFR numbers below are averaged
+over three random seeds.
 
 \begin{center}
 \small
@@ -279,27 +327,30 @@ Algorithm & Iterations & Value & Exploitability & Regret-update nodes \\
 \midrule
 CFR & $500$ & $-0.091170$ & $0.030586$ & $9.45 \times 10^6$ \\
 ES-MCCFR & $100{,}000$ & $-0.088230$ & $0.041565$ & $4.23 \times 10^6$ \\
+OS-MCCFR & $300{,}000$ & $-0.093453$ & $0.237494$ & $4.13 \times 10^6$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Both methods reduce exploitability substantially from the uniform-strategy
-baseline. CFR has a smoother curve because every update is exact for the
-current profile. MCCFR is noisier, especially at low iteration counts,
-because each update depends on sampled chance and opponent actions.
+All three methods reduce exploitability from the uniform-strategy
+baseline, but the sampling schemes behave differently. CFR has the
+smoothest curve because every update is exact for the current profile.
+External sampling is noisier, but still stable because the update player
+branches over all actions at visited information sets. Outcome sampling is
+the noisiest: it uses importance weighting to learn from one sampled
+trajectory, so its variance is visibly larger.
 
 This node-count comparison is the main reason MCCFR is interesting. In
 this implementation, full CFR visits about $18{,}902$ tree nodes per
-iteration, while external sampling visits about $42.6$ nodes per
-iteration on average. Thus MCCFR can take many more iterations for a
-similar amount of tree traversal. In the table, MCCFR uses $200$ times as
-many iterations as CFR, but still performs fewer total regret-update node
-visits.
+iteration, external sampling visits about $42.6$ nodes per iteration, and
+outcome sampling visits about $13.7$ nodes per iteration. Outcome sampling
+is therefore the cheapest per iteration, but in this experiment it needs
+many more samples to overcome variance.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.82\linewidth]{figures/leduc_cfr_vs_external_sampling_mccfr.png}
-\caption{Exploitability of full-tree CFR and external-sampling MCCFR on Leduc Poker.}
+\caption{Exploitability of full-tree CFR, external-sampling MCCFR, and outcome-sampling MCCFR on Leduc Poker.}
 \end{figure}
 
 \begin{figure}[H]
@@ -308,11 +359,10 @@ visits.
 \caption{The same convergence curves measured by the number of tree nodes visited during regret updates.}
 \end{figure}
 
-The learned strategies also match the qualitative structure of Kuhn Poker
-equilibria. Weak hands mostly check and fold against bets, strong hands
-bet or call aggressively, and the middle card mixes in response states.
-This is a useful sanity check because a small exploitability number alone
-does not always make implementation mistakes easy to spot.
+The external-sampling learned strategies also match the qualitative
+structure of Leduc Poker. This is a useful sanity check because a small
+exploitability number alone does not always make implementation mistakes
+easy to spot.
 
 \section{Learned Strategies}
 
@@ -351,25 +401,38 @@ conceptual algorithm from CFR. It is better understood as the same local
 counterfactual regret update with a sampled estimator for the values.
 External sampling is especially easy to understand because the update
 player still branches over all actions at visited information sets.
+Outcome sampling is the more purely Monte Carlo version: it samples a
+single trajectory and uses importance weights to correct the estimator.
+This connects the project directly to the importance-sampling part of the
+course.
 
 The limitation of this project is that Leduc Poker is still small compared
 with realistic poker games. It is large enough to show why sampling helps,
 but not large enough to require abstraction. Natural next steps would be
-outcome sampling, larger Leduc variants, and abstraction methods such as
-bucketing.
+variance-reduction baselines for outcome sampling, larger Leduc variants,
+and abstraction methods such as bucketing.
 
 External sampling is pedagogically attractive because it preserves the
 ``compare all of my actions'' step at each visited information set. This
 made the implementation close to the full-tree CFR baseline. The price is
 variance: a single sampled traversal sees only one chance outcome and one
 opponent action at each sampled opponent decision. Outcome sampling would
-go further by sampling actions for all players and using importance
-weighting. That can make each iteration even cheaper, but the estimator is
-usually higher variance and more delicate to implement correctly.
+goes further by sampling actions for all players. That makes each
+iteration even cheaper, but the estimator is higher variance and more
+delicate to implement correctly. This tradeoff is exactly what appears in
+the experiment: outcome sampling visits the fewest nodes per iteration,
+but its exploitability curve is much noisier.
 
 \sloppy
 
 \begin{thebibliography}{9}
+
+\bibitem{hur2026cfr}
+Seongwoo Hur.
+\newblock Study and implementation of regret matching and counterfactual
+regret minimization algorithms.
+\newblock GitHub repository, 2026.
+\newblock \url{https://github.com/swhur1214/cfr}.
 
 \bibitem{southey2005}
 Finnegan Southey, Michael P. Bowling, Bryce Larson, Carmelo Piccione,
