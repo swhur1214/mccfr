@@ -22,11 +22,14 @@ This report studies Monte Carlo Counterfactual Regret Minimization
 (MCCFR), focusing on the external-sampling variant. The project builds on
 a previous implementation of full-tree CFR for Kuhn Poker and asks what
 changes when the regret update is estimated from sampled trajectories
-instead of a complete traversal of the game tree. I implement both
-full-tree CFR and external-sampling MCCFR in Python, compare them on Kuhn
-Poker, and use exact best responses to measure exploitability. The main
-message is that MCCFR keeps the same local regret-minimization structure
-as CFR, but replaces exact counterfactual values with sampled estimates.
+instead of a complete traversal of the game tree. I keep Kuhn Poker as a
+sanity check, but use Leduc Poker as the main experiment because it is
+large enough to show the computational motivation for sampling. I
+implement full-tree CFR and external-sampling MCCFR in Python, compare
+them on Leduc Poker, and use exact best responses to measure
+exploitability. The main message is that MCCFR keeps the same local
+regret-minimization structure as CFR, but replaces exact counterfactual
+values with sampled estimates.
 \end{abstract}
 
 \section{From CFR to MCCFR}
@@ -42,9 +45,10 @@ In the full-tree version of CFR, the update is exact for the current
 strategy profile because it traverses the entire game tree. This is very
 clear pedagogically, but it is also the bottleneck: one iteration costs
 time proportional to the size of the tree. Kuhn Poker is tiny, so this is
-not an issue there. In larger games such as poker variants with more
-cards, betting actions, or public states, a full traversal can become too
-expensive.
+not an issue there. Leduc Poker is still small, but large enough that full
+tree traversal becomes noticeably more expensive. In larger games such as
+poker variants with more cards, betting actions, or public states, a full
+traversal can become too expensive.
 
 MCCFR keeps the same local regret-minimization structure but estimates
 the counterfactual update by sampling part of the tree. The version
@@ -63,44 +67,47 @@ where the hats indicate sampled estimates. The important point is that
 this has the same form as the CFR regret update, but the values are
 computed using a sampled subtree instead of the whole tree.
 
-\section{Kuhn Poker as the Test Game}
+\section{Leduc Poker as the Test Game}
 
-Kuhn Poker is a small two-player zero-sum poker game introduced by Kuhn
-\cite{kuhn1950}. The deck contains three cards, usually denoted
-$J,Q,K$. Each player antes one chip and receives one private card. Player
-0 acts first and can either check or bet. If player 0 checks, player 1 can
-check or bet. If a bet occurs, the other player can call or fold. If no
-one folds, the higher card wins the pot.
+Leduc Hold'em is a small poker benchmark introduced in the opponent
+modeling literature \cite{southey2005}. It is larger than Kuhn Poker but
+still small enough to evaluate exactly in a class project. The deck
+contains six cards:
+\[
+J,J,Q,Q,K,K.
+\]
+Each player antes one chip and receives one private card. After the first
+betting round, one public card is revealed. A second betting round follows,
+and if no one folds, the hand goes to showdown.
 
-The game is small enough that every strategy and best response can be
-computed exactly, but it still contains the main modeling features that
-make poker interesting:
+The game contains the main modeling features that make poker interesting:
 \begin{itemize}
 \item private information, because each player only observes their own
 card;
 \item sequential decisions, because betting history affects later actions;
 \item information sets, because the same private card and public history
 can arise under different hidden opponent cards;
-\item bluffing, because weak hands sometimes bet in equilibrium.
+\item public chance, because the board card changes hand strength after
+the first betting round;
+\item bluffing, because weak hands can represent strong future or made
+hands.
 \end{itemize}
 
-The known value of Kuhn Poker for player 0 is
-\[
-v^\star = -\frac{1}{18} \approx -0.055556.
-\]
-This value is useful as a sanity check: if an implementation converges to
-a strategy profile whose expected payoff is far from this value, then
-something is probably wrong.
+The fixed-limit version used here follows the common benchmark
+formalization. The round-1 bet size is $2$, the round-2 bet size is $4$,
+and each round has a maximum of two bet/raise actions. At showdown, a
+pair with the public card beats any high card. If neither player pairs
+the public card, the higher private rank wins, with $K>Q>J$. Equal private
+ranks split the pot.
 
 In the code, the game is represented as a simple dictionary of nodes. A
-chance node stores the six equally likely deals:
-\[
-KQ, QK, JK, KJ, QJ, JQ.
-\]
-A decision node stores the acting player, the information set, and the
-legal actions. A terminal node stores the zero-sum utility vector. This is
-not intended to be a general game engine. The point is to make the
-algorithm readable and to keep the representation close to the game tree.
+chance node stores either the initial ordered private-card deal or the
+public-card deal. A decision node stores the acting player, the
+information set, and the legal actions. A terminal node stores the
+zero-sum utility vector. With the above parameters, the generated Leduc
+tree has $9{,}451$ nodes and $288$ information sets, compared with only a
+few dozen strategically relevant nodes in Kuhn Poker. This makes Leduc a
+better setting for seeing why MCCFR is useful.
 
 \section{Regret Matching and Full-Tree CFR}
 
@@ -201,8 +208,10 @@ responses.
 
 The main source files are organized as follows:
 \begin{itemize}
-\item \texttt{kuhn\_poker.py}: explicit Kuhn Poker game tree and a compact
-player-centric representation used for exact evaluation;
+\item \texttt{kuhn\_poker.py}: explicit Kuhn Poker game tree used for
+sanity checks;
+\item \texttt{leduc\_poker.py}: generated fixed-limit Leduc Poker game
+tree;
 \item \texttt{regret\_matching.py}: positive-regret normalization with a
 uniform fallback;
 \item \texttt{cfr.py}: full-tree CFR baseline;
@@ -212,11 +221,11 @@ strategy formatting helpers.
 \end{itemize}
 
 Exploitability is computed exactly rather than estimated from rollouts.
-First, the behavioral strategy is converted into sequence-form realization
-weights. Then, for each player, the value of a best response to the
-opponent's fixed strategy is computed by dynamic programming over that
-player's tree-form sequential decision process. The reported
-exploitability is
+For each player, the best-response recursion carries distributions over
+histories weighted only by chance and opponent reach. When the
+best-response player acts, histories are grouped by information set, so
+one action is chosen for the whole information set rather than separately
+at each hidden state. The reported exploitability is
 \[
 \frac{1}{2}
 \left(
@@ -238,12 +247,14 @@ The project includes small tests because implementation errors in CFR can
 be subtle. The tests check:
 \begin{itemize}
 \item the Kuhn Poker chance node has six uniform deals;
+\item the Leduc Poker chance node has thirty uniform private-card deals;
 \item all terminal utilities are zero-sum;
 \item regret matching normalizes positive regrets correctly and falls
 back to the uniform strategy when needed;
 \item exploitability is finite for a known simple strategy;
 \item full-tree CFR converges near the Kuhn Poker value after
 $10{,}000$ iterations;
+\item the generated Leduc game has finite uniform-strategy exploitability;
 \item external-sampling MCCFR reduces exploitability over multiple fixed
 random seeds;
 \item MCCFR visits fewer nodes per iteration than full-tree CFR.
@@ -255,14 +266,10 @@ lists, missing uniform fallback, and regret updates with the wrong sign.
 
 \section{Experiments}
 
-The experiment compares full-tree CFR and external-sampling MCCFR on Kuhn
-Poker. The known value of Kuhn Poker for player 0 is
-\[
--\frac{1}{18} \approx -0.055556.
-\]
-I ran full-tree CFR for $10{,}000$ iterations and MCCFR for $100{,}000$
-iterations with three random seeds. The MCCFR numbers below are averaged
-over seeds.
+The main experiment compares full-tree CFR and external-sampling MCCFR on
+Leduc Poker. I ran full-tree CFR for $500$ iterations and MCCFR for
+$100{,}000$ iterations with three random seeds. The MCCFR numbers below
+are averaged over seeds.
 
 \begin{center}
 \small
@@ -270,34 +277,34 @@ over seeds.
 \toprule
 Algorithm & Iterations & Value & Exploitability & Regret-update nodes \\
 \midrule
-CFR & $10{,}000$ & $-0.055561$ & $0.001982$ & $1.10 \times 10^6$ \\
-ES-MCCFR & $100{,}000$ & $-0.055551$ & $0.001746$ & $1.26 \times 10^6$ \\
+CFR & $500$ & $-0.091170$ & $0.030586$ & $9.45 \times 10^6$ \\
+ES-MCCFR & $100{,}000$ & $-0.088230$ & $0.041565$ & $4.23 \times 10^6$ \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-Both methods converge close to the known value. CFR has a smoother curve
-because every update is exact for the current profile. MCCFR is noisier,
-but each iteration visits far fewer nodes. In this implementation, full
-CFR visits about $110$ tree nodes per iteration, while external sampling
-visits about $12.6$ nodes per iteration on average.
+Both methods reduce exploitability substantially from the uniform-strategy
+baseline. CFR has a smoother curve because every update is exact for the
+current profile. MCCFR is noisier, especially at low iteration counts,
+because each update depends on sampled chance and opponent actions.
 
-This node-count comparison is the main reason MCCFR is interesting. On
-Kuhn Poker, full CFR is already fast, so runtime alone is not a very
-meaningful benchmark. But the number of traversed tree nodes is a proxy
-for what would happen in a larger extensive-form game: if one full
-iteration is too expensive, then it is useful to trade exact updates for
-many cheaper sampled updates.
+This node-count comparison is the main reason MCCFR is interesting. In
+this implementation, full CFR visits about $18{,}902$ tree nodes per
+iteration, while external sampling visits about $42.6$ nodes per
+iteration on average. Thus MCCFR can take many more iterations for a
+similar amount of tree traversal. In the table, MCCFR uses $200$ times as
+many iterations as CFR, but still performs fewer total regret-update node
+visits.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.82\linewidth]{figures/kuhn_cfr_vs_external_sampling_mccfr.png}
-\caption{Exploitability of full-tree CFR and external-sampling MCCFR on Kuhn Poker.}
+\includegraphics[width=0.82\linewidth]{figures/leduc_cfr_vs_external_sampling_mccfr.png}
+\caption{Exploitability of full-tree CFR and external-sampling MCCFR on Leduc Poker.}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.82\linewidth]{figures/kuhn_mccfr_nodes.png}
+\includegraphics[width=0.82\linewidth]{figures/leduc_mccfr_nodes.png}
 \caption{The same convergence curves measured by the number of tree nodes visited during regret updates.}
 \end{figure}
 
@@ -311,32 +318,31 @@ does not always make implementation mistakes easy to spot.
 
 The learned average strategies also give a qualitative sanity check. The
 following table shows selected information sets from one run. The exact
-numbers are not unique because Kuhn Poker has multiple equilibrium
-strategies, but the broad structure is correct: weak hands usually avoid
-calling, strong hands call or bet aggressively, and some bluffing appears
-with the weakest card.
+numbers are not unique, and the Leduc information-set labels are longer
+because they include private rank, public rank, betting round, and public
+betting history. Still, the broad structure is sensible: weak unpaired
+hands are cautious, paired hands become aggressive, and facing a bet with
+a weak hand often leads to folding.
 
 \begin{center}
-\begin{tabular}{llrr}
+\small
+\begin{tabular}{llrrr}
 \toprule
-Algorithm & Information set & First action prob. & Second action prob. \\
+Card/public/history & Actions & First & Second & Third \\
 \midrule
-CFR & $J$ $(\text{check},\text{bet})$ & $0.7727$ & $0.2273$ \\
-CFR & $K$ $(\text{check},\text{bet})$ & $0.2978$ & $0.7022$ \\
-CFR & $Q|\text{check-bet}$ $(\text{call},\text{fold})$ & $0.5632$ & $0.4368$ \\
-MCCFR & $J$ $(\text{check},\text{bet})$ & $0.7311$ & $0.2689$ \\
-MCCFR & $K$ $(\text{check},\text{bet})$ & $0.2056$ & $0.7944$ \\
-MCCFR & $Q|\text{check-bet}$ $(\text{call},\text{fold})$ & $0.5979$ & $0.4021$ \\
+$J$, no public, round 1 start & check/bet & $0.927$ & $0.073$ & -- \\
+$J$, no public, facing check-bet & fold/call/raise & $0.927$ & $0.054$ & $0.020$ \\
+$J$, public $J$, round 2 start & check/bet & $0.341$ & $0.659$ & -- \\
+$J$, public $J$, high-pot round 2 start & check/bet & $0.018$ & $0.982$ & -- \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 The most useful feature of this table is not the exact decimal values,
-but the pattern. With $J$, the weakest card, the strategy mixes in some
-bets as bluffs but usually checks and folds when facing bets. With $K$,
-the strongest card, the strategy bets frequently and calls bets almost
-always. The queen is the marginal card and therefore mixes in response
-states.
+but the pattern. The same private $J$ is weak before the public card is
+revealed, but becomes a strong paired hand when the public card is also
+$J$. The learned strategy responds to that change by betting much more
+often in the paired states.
 
 \section{Discussion and Bibliography}
 
@@ -346,11 +352,11 @@ counterfactual regret update with a sampled estimator for the values.
 External sampling is especially easy to understand because the update
 player still branches over all actions at visited information sets.
 
-The limitation of this project is that Kuhn Poker is small. Full-tree CFR
-is already cheap, so the practical scaling advantage of MCCFR is only
-visible through the node-visit counter rather than through a difficult
-large-game benchmark. Natural next steps would be outcome sampling,
-Leduc Poker, and abstraction methods such as bucketing.
+The limitation of this project is that Leduc Poker is still small compared
+with realistic poker games. It is large enough to show why sampling helps,
+but not large enough to require abstraction. Natural next steps would be
+outcome sampling, larger Leduc variants, and abstraction methods such as
+bucketing.
 
 External sampling is pedagogically attractive because it preserves the
 ``compare all of my actions'' step at each visited information set. This
@@ -364,6 +370,14 @@ usually higher variance and more delicate to implement correctly.
 \sloppy
 
 \begin{thebibliography}{9}
+
+\bibitem{southey2005}
+Finnegan Southey, Michael P. Bowling, Bryce Larson, Carmelo Piccione,
+Neil Burch, Darse Billings, and Chris Rayner.
+\newblock Bayes' bluff: Opponent modelling in poker.
+\newblock In \emph{Proceedings of the Twenty-First Conference on Uncertainty
+in Artificial Intelligence}, 2005.
+\newblock \url{https://arxiv.org/abs/1207.1411}.
 
 \bibitem{zinkevich2007}
 Martin Zinkevich, Michael Johanson, Michael Bowling, and Carmelo Piccione.

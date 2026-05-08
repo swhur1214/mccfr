@@ -183,14 +183,75 @@ def best_response_value(efg: dict, tfsdp: dict, player: int, opponent_x: dict) -
     return values[""]
 
 
+def best_response_value_behavior(efg: dict, strategy: dict, player: int) -> float:
+    """Return an exact best-response value to a behavioral strategy profile.
+
+    The recursion carries distributions over histories weighted only by chance
+    and opponent reach. When the best-response player is to act, histories are
+    grouped by information set so that one action is chosen for the whole
+    information set, not separately at each hidden state.
+    """
+
+    def solve(items: list[tuple[str, float]]) -> float:
+        terminal_value = 0.0
+        continuation = []
+        player_groups = {}
+
+        for node_id, weight in items:
+            if weight == 0.0:
+                continue
+
+            node = efg[node_id]
+            node_type = node["type"]
+
+            if node_type == "TERMINAL":
+                terminal_value += weight * float(node["utility"][player])
+                continue
+
+            if node_type == "CHANCE":
+                for _, child, prob in node["outcomes"]:
+                    continuation.append((child, weight * prob))
+                continue
+
+            info_set = node["information_set"]
+            actions = [action for action, _ in node["actions"]]
+            if node["player"] == player:
+                player_groups.setdefault(info_set, []).append((node_id, weight))
+            else:
+                for action, child in node["actions"]:
+                    prob = _strategy_prob(strategy, info_set, action, actions)
+                    continuation.append((child, weight * prob))
+
+        value = terminal_value
+        if continuation:
+            value += solve(continuation)
+
+        for group in player_groups.values():
+            first_node = efg[group[0][0]]
+            actions = [action for action, _ in first_node["actions"]]
+            action_to_child = {
+                node_id: {action: child for action, child in efg[node_id]["actions"]}
+                for node_id, _ in group
+            }
+
+            best = -float("inf")
+            for action in actions:
+                child_items = [
+                    (action_to_child[node_id][action], weight)
+                    for node_id, weight in group
+                ]
+                best = max(best, solve(child_items))
+            value += best
+
+        return value
+
+    return solve([("", 1.0)])
+
+
 def exploitability(efg: dict, strategy: dict) -> float:
-    """Return exploitability, i.e. NashConv / 2, for Kuhn Poker."""
-    tfsdp0 = KuhnPoker.tfsdp(player=0)
-    tfsdp1 = KuhnPoker.tfsdp(player=1)
-    x0 = behavior_to_sequence(strategy, tfsdp0)
-    x1 = behavior_to_sequence(strategy, tfsdp1)
-    br0 = best_response_value(efg, tfsdp0, player=0, opponent_x=x1)
-    br1 = best_response_value(efg, tfsdp1, player=1, opponent_x=x0)
+    """Return exploitability, i.e. NashConv / 2, for a 2p zero-sum EFG."""
+    br0 = best_response_value_behavior(efg, strategy, player=0)
+    br1 = best_response_value_behavior(efg, strategy, player=1)
     return 0.5 * (br0 + br1)
 
 
