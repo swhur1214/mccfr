@@ -389,25 +389,16 @@ experiments and save the figures used below.
 
 \subsection{Sanity Checks}
 
-Small implementation mistakes in game-solving algorithms can produce
-convincing-looking numbers, so Kuhn Poker serves as a debugging game
-before the larger Leduc experiment. Kuhn Poker is useful because it is
-small enough to inspect directly and its equilibrium value is known:
-player 0 should get about $-1/18$ per hand under equilibrium play.
+Before moving to Leduc Poker, the algorithms are run on Kuhn Poker. Kuhn
+Poker is small enough to inspect directly, and its equilibrium value is
+known: player 0 receives about $-1/18$ per hand under equilibrium play. As
+training proceeds, full-tree CFR should move toward this value, and the
+sampled variants should show the same direction with more noise and fewer
+visited nodes.
 
-The tests check basic game construction first. Chance deals must have
-probabilities that sum to one, and terminal payoffs must be zero-sum. The
-tests also check the regret-matching rule in isolation: positive regrets
-must be normalized correctly, and all-zero regrets must lead to the
-uniform strategy.
-
-After these local checks, convergence checks run on Kuhn Poker. Full-tree
-CFR should move close to the known game value. External sampling should
-reduce exploitability while visiting fewer nodes per iteration than the
-full-tree baseline. Outcome sampling should also move toward the known
-value, but with more noise. These checks do not prove correctness, but
-they catch the most likely mistakes: wrong payoff signs, wrong action
-ordering, and regret updates applied at the wrong places.
+Kuhn Poker therefore gives a compact reference point. Wrong payoff signs,
+invalid chance probabilities, or misplaced regret updates usually appear
+as values that drift away from $-1/18$ instead of toward it.
 
 \subsection{Experiment}
 
@@ -447,6 +438,12 @@ noisier in this simple implementation.
 \includegraphics[width=0.82\linewidth]{figures/leduc_mccfr_nodes.png}
 \caption{The same learning curves measured by how many tree nodes were visited.}
 \end{figure}
+
+\begin{figure}[htp]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/leduc_mccfr_seconds.png}
+\caption{The same learning curves measured by elapsed wall-clock time.}
+\end{figure}
 \FloatBarrier
 
 The node count is the clearest way to see the Monte Carlo idea. In this
@@ -456,20 +453,16 @@ outcome sampling visits about $13.7$ nodes per iteration. The sampled
 methods therefore do much less work per update. They pay for this with
 variance and with the need for many more iterations.
 
-The two figures should be read together. Figure 1 uses training
-iterations on the horizontal axis. It shows that one full-tree CFR
-iteration is a much stronger update than one sampled update. Figure 2 uses
-visited tree nodes on the horizontal axis. It asks a more Monte Carlo
-question: how good is the strategy after spending a given amount of tree
-traversal work? This second view is where the sampled methods become more
-meaningful, because their individual updates are cheap.
-
-The notebooks also measure wall-clock time. In this small pure
-Python experiment, the sampled methods did not automatically become faster
-in elapsed seconds. The game is small, and sampling plus repeated
-evaluation has overhead. This is an important practical lesson: Monte
-Carlo methods should be judged under a computational budget, not only by
-iteration count.
+The three plots put the same learning process on three different axes.
+Iteration count favors full-tree CFR, because one full traversal is a much
+stronger update than one sampled trajectory. Node count asks a more Monte
+Carlo question: how good is the strategy after spending a given amount of
+tree traversal work? Wall-clock time adds the practical engineering view.
+In this small pure Python run, the sampled methods are not automatically
+faster in elapsed seconds, because the game is still small and sampling
+has overhead. The comparison is still useful: Monte Carlo methods are best
+understood through a computational budget, not only through iteration
+count.
 
 \subsection{What the Experiment Shows}
 
