@@ -258,6 +258,41 @@ computational fact is that full-tree CFR computes exact averages over the
 whole tree. This is clean and stable, but expensive. If the tree doubles
 in size, one iteration roughly doubles in cost.
 
+A slightly more formal way to write the update is useful before introducing
+sampling. Extending the local distribution above to every information set,
+let $\sigma$ denote the current strategy profile: all the action probabilities
+used by both players. The quantity $v_i^\sigma(I)$ means player $i$'s expected
+payoff from information set $I$ if play follows $\sigma$, while
+$v_i^\sigma(I,a)$ means the same payoff if player $i$ first chooses action $a$
+at $I$ and then returns to $\sigma$. Finally, $\pi_i^\sigma(I)$ is player
+$i$'s own probability of reaching $I$, and $\pi_{-i}^\sigma(I)$ is the reach
+probability coming from chance and the other player. If $R_i^t(I,a)$ is the
+cumulative regret after $t$ iterations, CFR updates the regret of action $a$
+by
+\[
+R_i^{t+1}(I,a)
+=
+R_i^t(I,a)
++
+\pi_{-i}^{\sigma^t}(I)
+\left(
+v_i^{\sigma^t}(I,a)-v_i^{\sigma^t}(I)
+\right).
+\]
+The factor $\pi_{-i}^{\sigma^t}(I)$ is what makes the regret
+\emph{counterfactual}: the update asks how valuable action $a$ would have
+been at $I$, weighted by the parts of the game outside player $i$'s own
+choices. The player's own reach probability is instead used when averaging
+strategies:
+\[
+\bar{\sigma}_i^T(I,a)
+=
+\frac{\sum_{t=1}^T \pi_i^{\sigma^t}(I)\sigma_i^t(I,a)}
+{\sum_{t=1}^T \pi_i^{\sigma^t}(I)}.
+\]
+This is the exact full-tree update that MCCFR later replaces by sampled
+estimates.
+
 \subsection{Where Monte Carlo Enters}
 
 Monte Carlo methods are useful when an exact average is too expensive but
@@ -295,17 +330,17 @@ in how much of the tree they inspect before making a regret update.
 \subsection{A Small Sampling Picture}
 
 A small example makes the sampling idea more concrete. Imagine a player
-faces one information set and can choose either action $A$ or action $B$.
+faces one information set and can choose either action $a_1$ or action $a_2$.
 Behind that information set there may be many hidden worlds: the opponent
 may hold different cards, chance may reveal different public cards later,
 and the opponent may respond in different ways.
 
 Full-tree CFR asks the expensive question: what would happen to action
-$A$ and action $B$ after averaging over all of those hidden worlds? That
+$a_1$ and action $a_2$ after averaging over all of those hidden worlds? That
 is the cleanest answer, but it requires looking everywhere.
 
 External sampling asks a cheaper question: in one randomly chosen hidden
-world, how do action $A$ and action $B$ compare? This is not the exact
+world, how do action $a_1$ and action $a_2$ compare? This is not the exact
 average over all worlds, but it is still a useful comparison. After many
 random worlds, the accumulated regrets begin to point in the right
 direction.
