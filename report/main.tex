@@ -398,16 +398,18 @@ the least of the tree, but its learning curve is much noisier.
 \subsection{Implementation}
 
 The algorithms are implemented in Python using a deliberately direct,
-tabular representation. The source code is split into small files:
-\texttt{cfr.py} for full-tree CFR, \texttt{external\_sampling\_mccfr.py}
-for external sampling, \texttt{outcome\_sampling\_mccfr.py} for outcome
-sampling, and \texttt{util.py} for evaluation helpers. The local learning
-rule is in \texttt{regret\_matching.py}.
+tabular representation. The repository modules handle the reusable parts:
+game-tree generation for Kuhn and Leduc Poker, the regret-matching rule,
+the full-tree CFR baseline, and exact evaluation helpers such as expected
+value and exploitability. The main Monte Carlo code for this project,
+external sampling and outcome sampling, is written directly in the submitted
+notebook, followed by the training loops, result tables, and figures.
 
-For reproducibility, the complete implementation used for the experiments,
-including the game definitions, trainers, evaluation utilities, and notebooks,
-is available in the project repository:
-\url{https://github.com/swhur1214/mccfr}.
+For reproducibility, the complete implementation is available in the project
+repository:
+\url{https://github.com/swhur1214/mccfr}. Pulling the main branch and running
+\texttt{notebooks/monte\_carlo\_counterfactual\_regret\_minimization.ipynb}
+from the repository root reproduces the final experiment below.
 
 The experiments use two small games. Kuhn Poker is tiny and is useful for
 debugging \cite{kuhn1950,wikipediaKuhnPoker}. Leduc Poker is still a toy
