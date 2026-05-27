@@ -1,23 +1,161 @@
-\documentclass[11pt]{article}
+\documentclass[11pt,reqno,twoside]{article}
 
-\usepackage[centering,top=1.5in,bottom=1.2in,left=1.4in,right=1.4in]{geometry}
-\usepackage{amsmath,amssymb,mathtools}
-\usepackage{booktabs}
+\usepackage{fixltx2e}
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{graphicx}
-\usepackage{float}
-\usepackage{hyperref}
-\usepackage{microtype}
+\usepackage{placeins}
+\usepackage{enumerate}
+\usepackage{algcompatible}
+\usepackage{verbatim}
+\usepackage{setspace}
+\let\counterwithout\relax
+\let\counterwithin\relax
+\usepackage{lmodern}
+\usepackage[scale=0.88]{tgheros}
+\newcommand\hmmax{2}
+\newcommand\bmmax{2}
+\usepackage{bm}
+\providecommand{\mathbold}[1]{\bm{#1}}
+\usepackage{bbold}
+\usepackage{amsmath,amsbsy,amsgen,amscd,amsthm,amsfonts,amssymb}
+\usepackage[centering,top=1.5in,bottom=1.2in,left=1.4in,right=1.4in]{geometry}
+\usepackage{titling}
+\usepackage{musicography}
+\setlength{\droptitle}{-7.5em}
+\usepackage[sf,bf,compact]{titlesec}
+\usepackage{booktabs,longtable,tabu}
+\setlength{\tabulinesep}{1mm}
+\usepackage[font=small,margin=12pt,labelfont={sf,bf},labelsep={space}]{caption}
+\usepackage[usenames,dvipsnames]{xcolor}
+\definecolor{dark-gray}{gray}{0.3}
+\definecolor{dkgray}{rgb}{.4,.4,.4}
+\definecolor{dkblue}{rgb}{0,0,.5}
+\definecolor{medblue}{rgb}{0,0,.75}
+\definecolor{rust}{rgb}{0.5,0.1,0.1}
+\usepackage{url}
+\usepackage[colorlinks=true]{hyperref}
+\hypersetup{linkcolor=dkblue}
+\hypersetup{citecolor=rust}
+\hypersetup{urlcolor=rust}
+\usepackage[final]{microtype}
+
+\newtheoremstyle{myThm}
+    {\topsep}
+    {\topsep}
+    {\itshape}
+    {}
+    {\sffamily\bfseries}
+    {.}
+    {.5em}
+    {}
+\newtheoremstyle{myRem}
+    {\topsep}
+    {\topsep}
+    {}
+    {}
+    {\sffamily}
+    {.}
+    {.5em}
+    {}
+\newtheoremstyle{myDef}
+    {\topsep}
+    {\topsep}
+    {}
+    {}
+    {\sffamily\bfseries}
+    {.}
+    {.5em}
+    {}
+\theoremstyle{myThm}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{myRem}
+\newtheorem{remark}[theorem]{Remark}
+\theoremstyle{myDef}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+
+\usepackage{fancyhdr}
+\usepackage{nopageno}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.5pt}
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\textsf{\small \thepage}}
+\setlength{\headheight}{14pt}
+
+\let\originalleft\left
+\let\originalright\right
+\renewcommand{\left}{\mathopen{}\mathclose\bgroup\originalleft}
+\renewcommand{\right}{\aftergroup\egroup\originalright}
+\usepackage{mathtools}
+\mathtoolsset{centercolon}
+\newcommand{\notate}[1]{\textcolor{red}{\textbf{[#1]}}}
+\let\oldphi\phi
+\renewcommand{\phi}{\varphi}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\cnst}[1]{\mathrm{#1}}
+\newcommand{\econst}{\mathrm{e}}
+\newcommand{\zerovct}{\vct{0}}
+\newcommand{\Id}{{I}}
+\newcommand{\onemtx}{\bm{1}}
+\newcommand{\zeromtx}{\bm{0}}
+\providecommand{\mathbbm}{\mathbb}
+\newcommand{\R}{\mathbbm{R}}
+\newcommand{\C}{\mathbbm{C}}
+\newcommand{\N}{\mathbbm{N}}
+\newcommand{\Z}{\mathbbm{Z}}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\red}{\color{red}}
+\newcommand{\blue}{\color{blue}}
+\definecolor{mygreen}{rgb}{0.1,0.75,0.2}
+\newcommand{\grn}{\color{mygreen}}
+\newcommand{\nc}{\normalcolor}
+\newcommand{\Prob}{\operatorname{\mathbbm{P}}}
+\newcommand{\Expect}{\operatorname{\mathbb{E}}}
+\newcommand{\V}{\operatorname{\mathbb{V}}}
+\newcommand{\vct}[1]{{#1}}
+\newcommand{\mtx}[1]{{#1}}
+\newcommand{\dkl}{d_{\mbox {\tiny{\rm KL}}}}
+\newcommand{\dtv}{d_{\mbox {\tiny{\rm TV}}}}
+\newcommand{\Nc}{\mathcal{N}}
+\usepackage[]{algorithm}
+\usepackage{graphicx, subfig}
+\usepackage{authblk}
+\usepackage[square,numbers]{natbib}
+\usepackage{chngcntr}
+\usepackage{mathrsfs}
+\counterwithin{table}{section}
+\counterwithin{algorithm}{section}
+\makeatletter\@addtoreset{section}{part}\makeatother
+\numberwithin{equation}{section}
+\renewcommand{\triangleq}{:=}
+\newcommand{\upperRomannumeral}[1]{\uppercase\expandafter{\romannumeral#1}}
+\newcommand{\lowerromannumeral}[1]{\romannumeral#1\relax}
+\renewcommand{\hat}{\widehat}
 \emergencystretch=3em
 
-\title{Monte Carlo Counterfactual Regret Minimization}
-\author{}
-\date{\today}
+\title{\Huge{Monte Carlo Counterfactual Regret Minimization}\\
+\huge{Independent Project Essay}}
+\author{\Large{Seongwoo Hur}\\
+Department of Statistics, University of Chicago}
+\date{}
 
 \begin{document}
 
 \maketitle
 
-\begin{abstract}
+\newpage
+
+\section{\Large{\sffamily{Monte Carlo Counterfactual Regret Minimization}}}
+
+\noindent
 For this project, I implemented Monte Carlo Counterfactual Regret
 Minimization (MCCFR), focusing on external sampling and outcome sampling.
 This project builds on my previous implementation and report on regret
@@ -26,9 +164,8 @@ question is what changes when CFR does not traverse the whole game tree,
 but instead estimates the regret update from sampled trajectories. I use
 Leduc Poker to compare full-tree CFR, external-sampling MCCFR, and
 outcome-sampling MCCFR in Python.
-\end{abstract}
 
-\section{From CFR to MCCFR}
+\subsection{From CFR to MCCFR}
 
 Counterfactual Regret Minimization (CFR) is a regret-minimization method
 for extensive-form games with imperfect information. The way I think about
@@ -72,7 +209,7 @@ trajectory. Since the unchosen actions are not observed, the estimator
 needs importance weights based on the probability of the sampled
 trajectory. This also made the results noisier.
 
-\section{Leduc Poker as the Test Game}
+\subsection{Leduc Poker as the Test Game}
 
 I used Leduc Hold'em as the main game for the experiments. It is a small
 poker game that is often used in CFR examples and opponent modeling work
@@ -117,7 +254,7 @@ few dozen strategically relevant nodes in Kuhn Poker. This size was enough
 for the difference between full traversal and sampled traversal to show up
 in the experiment.
 
-\section{Regret Matching and Full-Tree CFR}
+\subsection{Regret Matching and Full-Tree CFR}
 
 Regret matching is the local learning rule I used in all three trainers.
 Suppose an information set has action set $A$. Let $R^T(a)$ be the cumulative
@@ -172,7 +309,7 @@ table determines the current strategy through regret matching. The
 strategy-sum table is used at the end to return the average strategy,
 which is the strategy that converges in the standard CFR guarantee.
 
-\section{External Sampling}
+\subsection{External Sampling}
 
 I implemented external sampling with a recursive trainer. At a terminal
 node, the recursion returns the payoff of the update player. At a chance
@@ -193,7 +330,7 @@ corresponding strategy sum. Since each iteration updates both players once,
 both players' average-strategy tables are updated over time from the
 sampled traversals.
 
-\section{Outcome Sampling and Importance Weights}
+\subsection{Outcome Sampling and Importance Weights}
 
 Outcome sampling samples chance, opponent actions, and the update
 player's own actions. So one recursive call follows a single terminal
@@ -228,7 +365,7 @@ events that were unlikely under $q$ receive larger weight. The target is
 still the same counterfactual-regret update as CFR, but the estimate can
 have much higher variance.
 
-\section{Implementation}
+\subsection{Implementation}
 
 The code is self-contained and intentionally small. It follows the direct
 tabular style of my earlier CFR repository \cite{hur2026cfr}, but does
@@ -288,7 +425,7 @@ CFR and MCCFR more directly. Full CFR visits the whole tree on each
 update. External sampling visits only a sampled part of the tree, although
 it still branches over the update player's own actions.
 
-\section{Experiments}
+\subsection{Experiments}
 
 The main experiment compares full-tree CFR, external-sampling MCCFR, and
 outcome-sampling MCCFR on Leduc Poker. I ran full-tree CFR for $500$
@@ -334,29 +471,30 @@ overhead and variance are visible in elapsed time. So the node-count plot
 is the cleaner algorithmic comparison, while the wall-clock plot is a more
 honest measurement of this particular implementation.
 
-\begin{figure}[H]
+\begin{figure}[htp]
 \centering
 \includegraphics[width=0.82\linewidth]{figures/leduc_cfr_vs_external_sampling_mccfr.png}
 \caption{Exploitability of full-tree CFR, external-sampling MCCFR, and outcome-sampling MCCFR on Leduc Poker.}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htp]
 \centering
 \includegraphics[width=0.82\linewidth]{figures/leduc_mccfr_nodes.png}
 \caption{The same convergence curves measured by the number of tree nodes visited during regret updates.}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[htp]
 \centering
 \includegraphics[width=0.82\linewidth]{figures/leduc_mccfr_seconds.png}
 \caption{The same convergence curves measured by elapsed wall-clock seconds.}
 \end{figure}
+\FloatBarrier
 
 The external-sampling learned strategies also looked reasonable for Leduc
 Poker. This was a useful sanity check because a small exploitability
 number alone does not always make implementation mistakes easy to spot.
 
-\section{Learned Strategies}
+\subsection{Learned Strategies}
 
 The learned average strategies also give a more concrete check on what the
 algorithm learned. The following table shows selected information sets
@@ -386,7 +524,7 @@ revealed, but becomes a strong paired hand when the public card is also
 $J$. The learned strategy responds to that change by betting much more
 often in the paired states.
 
-\section{Discussion and Bibliography}
+\subsection{Discussion and Bibliography}
 
 Viewed as a Monte Carlo project, MCCFR is an example of replacing an exact
 expectation with a sampled estimator in a sequential decision problem.
