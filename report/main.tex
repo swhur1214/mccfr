@@ -369,6 +369,11 @@ for external sampling, \texttt{outcome\_sampling\_mccfr.py} for outcome
 sampling, and \texttt{util.py} for evaluation helpers. The local learning
 rule is in \texttt{regret\_matching.py}.
 
+For reproducibility, the complete implementation used for the experiments,
+including the game definitions, trainers, evaluation utilities, and notebooks,
+is available in the project repository:
+\url{https://github.com/swhur1214/mccfr}.
+
 The experiments use two small games. Kuhn Poker is tiny and is useful for
 debugging \cite{kuhn1950,wikipediaKuhnPoker}. Leduc Poker is still a toy
 game, but it is large enough to show why sampling matters
@@ -460,16 +465,16 @@ Carlo question: how good is the strategy after spending a given amount of
 tree traversal work? Wall-clock time adds the practical engineering view.
 In this small pure Python run, the sampled methods are not automatically
 faster in elapsed seconds, because the game is still small and sampling
-has overhead. The comparison is still useful: Monte Carlo methods are best
-understood through a computational budget, not only through iteration
-count.
+has overhead. So the iteration plot should not be read by itself. For
+MCCFR, the more relevant question is what happens after the same amount of
+tree traversal or runtime.
 
 \subsection{What the Experiment Shows}
 
-The main lesson is not a poker-specific one. The lesson is that a large
-decision tree can often be attacked by replacing exact averages with
-sampled estimates. CFR supplies the learning rule, and Monte Carlo
-sampling supplies the computational shortcut.
+The Leduc experiment shows the tradeoff more clearly than Kuhn Poker.
+Kuhn is so small that every method can touch enough of the tree quickly.
+In Leduc, a full CFR update already requires a much larger sweep, so the
+sampled methods start to make sense even though their curves are noisier.
 
 There are three takeaways.
 \begin{itemize}
@@ -483,11 +488,11 @@ whole trajectory and uses importance weights. It is cheap per update, but
 the estimates have high variance.
 \end{itemize}
 
-This is the same pattern that appears in many Monte Carlo algorithms. We
-replace an exact quantity by an unbiased or approximately unbiased sampled
-estimate. The estimate is cheaper but noisier. The useful question is not
-whether sampling is better in every small example, but when the exact
-calculation becomes too large to do at all.
+For this implementation, the node-count plots are the most useful ones.
+They show the practical reason for using MCCFR: it keeps the updates small
+when a full tree traversal is becoming expensive. The wall-clock plots are
+less dramatic here because the games are still toy-sized and the code is
+plain Python, but the cost difference in tree visits is already visible.
 
 \subsection{Discussion and Bibliography}
 
